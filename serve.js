@@ -50,8 +50,6 @@ export default async (api, workingDir) => {
 
   const endpoints = api.endpoints;
 
-  console.log("Endpoints:", endpoints);
-
   Object.keys(endpoints).forEach((k) => {
     Object.keys(endpoints[k]).forEach((method) => {
       const endpoint = endpoints[k][method];
