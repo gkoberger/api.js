@@ -1,0 +1,5 @@
+{
+  "title": "{{NAME}}",
+  "version": "{{DATE}}",
+  "versions": ["{{DATE}}"]
+}
