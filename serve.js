@@ -108,11 +108,11 @@ export default async (api, workingDir) => {
   });
 
   app.get("/oas.json", (req, res) => {
-    res.send(JSON.stringify(api.swagger, undefined, 2));
+    res.send(JSON.stringify(api.oas, undefined, 2));
   });
 
   app.get("/oas.yaml", (req, res) => {
-    res.send(YAML.stringify(api.swagger));
+    res.send(YAML.stringify(api.oas));
   });
 
   app.listen(port, () => {

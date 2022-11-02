@@ -100,7 +100,7 @@ if (cmd === "dev") {
 
 if (cmd === "oas") {
   const api = await prepare(workingDir);
-  console.log(api.swagger);
+  console.log(JSON.stringify(api.oas, undefined, 2));
 }
 
 if (cmd === "readme") {

@@ -1,9 +1,7 @@
 import path from "path";
 
-import YAML from "yaml";
 import getParams from "get-function-params";
 
-import colors from "colors";
 import { readdirSync, existsSync, readFileSync } from "fs";
 
 export default async (workingDir) => {
@@ -45,13 +43,6 @@ export default async (workingDir) => {
       .split(" ")
       .filter((p) => !!p.match(/^\$/))
       .map((p) => p.replace(/^\$/, ""));
-
-  const methodColors = {
-    get: "GET ".green,
-    post: "POST".cyan,
-    put: "PUT ".magenta,
-    delete: "DEL ".red,
-  };
 
   async function getEndpoints() {
     const getFiles = () =>
@@ -134,6 +125,11 @@ export default async (workingDir) => {
         summary: endpoint.title,
         description: endpoint.description,
         parameters: [],
+        responses: {
+          '200': {
+            description: 'OK'
+          }
+        }
       };
 
       getUrlParams(endpoint.handler).forEach((p) => {
@@ -154,7 +150,7 @@ export default async (workingDir) => {
   });
 
   return {
-    swagger,
+    oas: swagger,
     endpoints,
   };
 };
