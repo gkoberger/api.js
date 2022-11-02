@@ -56,9 +56,11 @@ export default async (api, workingDir) => {
 
       const expressInputs = endpoint.expressInputs;
 
-      console.log(" →", methodColors[expressInputs.method], expressInputs.path);
+      const useExpressPath = i => i.replace(/{(.*?)}/g, (k, v) => `:${v}`);
 
-      app[expressInputs.method](expressInputs.path, async (req, res) => {
+      console.log(" →", methodColors[expressInputs.method], useExpressPath(expressInputs.path));
+
+      app[expressInputs.method](useExpressPath(expressInputs.path), async (req, res) => {
         const inputs = {
           req: {},
           user: false,
