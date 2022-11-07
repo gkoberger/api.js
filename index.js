@@ -2,6 +2,10 @@ import path from "path";
 import utils from "./utils.js";
 import prepare from "./prepare.js";
 import serve from "./serve.js";
+import axios from "axios";
+import FormData from "form-data";
+
+import { spawn } from "child_process";
 
 import { findUpSync, pathExists } from "find-up";
 
@@ -105,4 +109,75 @@ if (cmd === "oas") {
 
 if (cmd === "readme") {
   console.log("Set up ReadMe...");
+
+  console.log("");
+  console.log(" ✅ Creating a new project");
+
+  const create = spawn("node", ["clone-project.js"], {
+    cwd: "/Users/gkoberger/Sites/readme/site/",
+  });
+
+  create.stdout.on("data", (data) => {
+    const d = data.toString();
+    try {
+      const out = JSON.parse(d);
+      //console.log(out);
+
+      projectCreated(out);
+    } catch (e) {
+      //console.log(e, d);
+    }
+  });
+
+  async function projectCreated(out) {
+    const api = await prepare(workingDir);
+
+    // Hack :/
+    api.oas.info.version = "1.0";
+
+    const oasFile = JSON.stringify(api.oas);
+    const b = Buffer.from(oasFile, "utf-8");
+
+    console.log(" 📝 Uploading OAS file");
+
+    // Create a new form instance
+    const form = new FormData();
+
+    form.append("spec", b, "swagger.json");
+
+    const options = {
+      method: "POST",
+      //url: "http://dash.readme.local:3000/api/v1/api-specification",
+      url: "https://dash.readme.com/api/v1/api-specification",
+      data: form,
+      headers: {
+        accept: "application/json",
+        "content-type": "multipart/form-data",
+
+        authorization: "Basic " + Buffer.from(out.token).toString("base64"),
+      },
+    };
+
+    axios
+      .request(options)
+      .then(function (response) {
+        const subdomain = out.project.subdomain;
+
+        console.log(" 📈 Setting up Metrics");
+
+        setTimeout(() => {
+          console.log("");
+          console.log("Your docs are ready to go!");
+          console.log(`  Hub:    https://${subdomain}.readme.io`);
+          console.log(
+            `  Admin:  https://dash.readme.com/project/${subdomain}/v1.0/reference`
+          );
+          //mongoose.disconnect();
+          process.exit(0);
+        }, 2000);
+      })
+      .catch(function (error) {
+        console.error(error);
+      });
+  }
 }

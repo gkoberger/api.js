@@ -1,5 +1,5 @@
 /*
- * /{{resource}} Endpoints
+ * GET https://example.com/{{resource}}
  */
 
 export async function list({ endpoint }) {
@@ -13,6 +13,10 @@ export async function list({ endpoint }) {
   };
 };
 
+/*
+ * GET https://example.com/{{resource}}/:id
+ */
+
 export async function show({ endpoint, auth }) {
   endpoint({
     title: "Show {{resource}}",
@@ -22,9 +26,13 @@ export async function show({ endpoint, auth }) {
   // Params can be named anything, but must start with $ and be in order
   // So, for example, /{{resource}}/1 would set $id to 1
   return async ({ $id, user }) => {
-    return { name: "John Doe" };
+    return { name: user.name, id: $id };
   };
 };
+
+/*
+ * POST https://example.com/{{resource}}.prepare/:param1/:param2
+ */
 
 export async function prepare({ endpoint, auth }) {
   endpoint({
@@ -33,6 +41,6 @@ export async function prepare({ endpoint, auth }) {
   });
 
   return async ({ $param1, $param2, user }) => {
-    return { name: user.name, param: $param };
+    return { name: user.name, param: $param1 };
   };
 };

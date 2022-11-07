@@ -56,50 +56,61 @@ export default async (api, workingDir) => {
 
       const expressInputs = endpoint.expressInputs;
 
-      const useExpressPath = i => i.replace(/{(.*?)}/g, (k, v) => `:${v}`);
+      const useExpressPath = (i) => i.replace(/{(.*?)}/g, (k, v) => `:${v}`);
 
-      console.log(" →", methodColors[expressInputs.method], useExpressPath(expressInputs.path));
+      console.log(
+        " →",
+        methodColors[expressInputs.method],
+        useExpressPath(expressInputs.path)
+      );
 
-      app[expressInputs.method](useExpressPath(expressInputs.path), async (req, res) => {
-        const inputs = {
-          req: {},
-          user: false,
-        };
+      app[expressInputs.method](
+        useExpressPath(expressInputs.path),
+        async (req, res) => {
+          const inputs = {
+            req: {},
+            user: false,
+          };
 
-        getUrlParams(endpoint.handler).forEach((param) => {
-          inputs[`$${param}`] = req.params[param];
-        });
+          getUrlParams(endpoint.handler).forEach((param) => {
+            inputs[`$${param}`] = req.params[param];
+          });
 
-        const authInput = {};
+          const authInput = {};
 
-        if (!endpoint.auth) {
-          endpoint.auth = (
-            await import(path.join(workingDir, "auth.js"))
-          ).default;
-        }
-
-        if (expectsParam("apiKey", endpoint.auth)) {
-          authInput.apiKey =
-            req.headers["api-key"] ||
-            req.headers["x-api-key"] ||
-            req.query["api-key"];
-          if (!authInput.apiKey) {
-            return res.status(503).json({ error: "api key required" });
-          }
-        }
-
-        if (endpoint.auth) {
-          const auth = await endpoint.auth(authInput);
-          if (!auth) {
-            return res.status(503).json({ error: "no auth" });
+          if (!endpoint.auth) {
+            endpoint.auth = (
+              await import(path.join(workingDir, "auth.js"))
+            ).default;
           }
 
-          inputs.user = auth;
-        }
+          if (expectsParam("apiKey", endpoint.auth)) {
+            authInput.apiKey =
+              req.headers["api-key"] ||
+              req.headers["x-api-key"] ||
+              req.query["api-key"];
+            if (!authInput.apiKey) {
+              return res.status(503).json({ error: "api key required" });
+            }
+          }
 
-        const out = await endpoint.handler(inputs);
-        res.status(200).send(out);
-      });
+          if (endpoint.auth) {
+            const auth = await endpoint.auth(authInput);
+            if (!auth) {
+              return res.status(503).json({ error: "no auth" });
+            }
+
+            inputs.user = auth;
+          }
+
+          try {
+            const out = await endpoint.handler(inputs);
+            res.status(200).send(out);
+          } catch (e) {
+            console.log("ERROR", e);
+          }
+        }
+      );
     });
   });
 
