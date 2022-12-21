@@ -31,7 +31,9 @@ const utils = {
 
     fs.writeFileSync(to, content);
   },
-
+  makeDir: (path) => {
+    fs.mkdirSync(path);
+  },
   prompter: function () {
     const info = {};
     return {

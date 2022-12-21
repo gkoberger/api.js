@@ -72,7 +72,7 @@ export default async (api, workingDir) => {
             user: false,
           };
 
-          getUrlParams(endpoint.handler).forEach((param) => {
+          getUrlParams(endpoint.method).forEach((param) => {
             inputs[`$${param}`] = req.params[param];
           });
 
@@ -80,7 +80,7 @@ export default async (api, workingDir) => {
 
           if (!endpoint.auth) {
             endpoint.auth = (
-              await import(path.join(workingDir, "auth.js"))
+              await import(path.join(`${workingDir}/.api`, "auth.js"))
             ).default;
           }
 
@@ -104,10 +104,16 @@ export default async (api, workingDir) => {
           }
 
           try {
-            const out = await endpoint.handler(inputs);
+            const out = await endpoint.method(inputs);
             res.status(200).send(out);
           } catch (e) {
-            console.log("ERROR", e);
+            const errors = endpoint.errors();
+            const error = errors.find(err => err.type === e.errorType);
+            // TODO: how do we determine the status?
+            Object.keys(e.data).forEach((d) => {
+              error.message = error.message.replace(d, e.data[d]);
+            });
+            res.status(400).json(error);
           }
         }
       );

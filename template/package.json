@@ -1,3 +1,9 @@
 {
-  "type": "module"
+  "type": "module",
+  "scripts": {
+    "dev": "tsc && node ~/Developer/ReadMe/api.js/index.js dev"
+  },
+  "devDependencies": {
+    "typescript": "^4.9.3"
+  }
 }

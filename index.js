@@ -5,7 +5,7 @@ import serve from "./serve.js";
 import axios from "axios";
 import FormData from "form-data";
 
-import { spawn } from "child_process";
+import { spawn, exec } from "child_process";
 
 import { findUpSync, pathExists } from "find-up";
 
@@ -59,6 +59,10 @@ if (cmd === "init") {
   files.forEach((f) => console.log(` + ${f}`));
 
   console.log("");
+  console.log("Installing dependencies");
+  exec("npm install");
+
+  console.log("");
   console.log("API created!".green);
   console.log("");
   console.log("");
@@ -80,9 +84,11 @@ if (cmd === "add") {
   });
   const vals = details.vals();
 
+  utils.makeDir(`${workingDir}/endpoints/${vals.resource}`);
+
   utils.copyFile(
-    path.join(__dirname, "template", "endpoints", "test.js"),
-    path.join(workingDir, "endpoints", `${vals.resource}.js`),
+    path.join(__dirname, "template", "endpoints", "test", "list.ts"),
+    path.join(workingDir, "endpoints", vals.resource, "list.ts"), // TODO-MARC: should the endpoint create a folder?
     vals
   );
 
@@ -90,8 +96,8 @@ if (cmd === "add") {
   console.log("Endpoints created!".green);
   console.log("");
   console.log(
-    "You can see your new endpoints in",
-    `/endpoints/${vals.resource}.js`.cyan
+    "You can see your new endpoint in",
+    `/endpoints/${vals.resource}/list.ts`.cyan
   );
 }
 

@@ -1,5 +1,6 @@
 import path from "path";
 
+import glob from 'glob';
 import getParams from "get-function-params";
 
 import { readdirSync, existsSync, readFileSync } from "fs";
@@ -45,49 +46,59 @@ export default async (workingDir) => {
       .map((p) => p.replace(/^\$/, ""));
 
   async function getEndpoints() {
-    const getFiles = () =>
-      readdirSync(path.join(workingDir, "endpoints"), {
-        withFileTypes: true,
-      }).filter((f) => f.name.match(/\.js$/));
+    workingDir += '/.api'
+    const files = glob.sync(`${path.join(workingDir, "endpoints")}/**/*.js`);
 
     const endpoints = {};
     const eps = {};
 
-    const files = getFiles();
+    // This isn't a valid assumption long term
+    // but right now this only works for /endpoints/{resource}/{method}.js
+    // We should probably support arbitrary paths that map to the URL
     for (var i = 0; i < files.length; i++) {
       const f = files[i];
-      const resource = f.name.replace(/\.js$/, "");
-      const ep = await import(path.join(workingDir, "endpoints", f.name));
+      const { resource, name } = f.match(/.*\/.api\/endpoints\/(?<resource>.*)\/(?<name>.*).js/).groups;
+      const ep = await import(path.join(workingDir, "endpoints", resource, `${name}.js`));
 
-      eps[resource] = {};
-
-      const endpointInfo = function (parent) {
-        return function (info) {
-          parent.title = info.title;
-          parent.description = info.description;
-        };
-      };
-      const authInfo = function (parent) {
-        return function (handler) {
-          parent.auth = handler;
-        };
-      };
-
-      const keys = Object.keys(ep);
-      for (let i2 = 0; i2 < keys.length; i2++) {
-        const method = keys[i2];
-
-        if (expectsParam("endpoint", ep[method])) {
-          eps[resource][method] = {
-            method,
-            resource,
-          };
-          eps[resource][method].handler = await ep[method]({
-            endpoint: endpointInfo(eps[resource][method]),
-            auth: authInfo(eps[resource][method]),
-          });
-        }
+      if(!eps[resource]) {
+        eps[resource] = {};
       }
+
+      // const endpointInfo = function (parent) {
+      //   return function (info) {
+      //     parent.title = info.title;
+      //     parent.description = info.description;
+      //   };
+      // };
+      // const authInfo = function (parent) {
+      //   return function (handler) {
+      //     parent.auth = handler;
+      //   };
+      // };
+
+      eps[resource][name] = {
+        method: ep.default,
+        resource,
+        documentation: ep.documentation,
+        auth: ep.auth,
+        errors: ep.errors,
+      }
+
+    //   const keys = Object.keys(ep);
+    //   for (let i2 = 0; i2 < keys.length; i2++) {
+    //     const method = keys[i2];
+
+    //     if (expectsParam("endpoint", ep[method])) {
+    //       eps[resource][method] = {
+    //         method,
+    //         resource,
+    //       };
+    //       eps[resource][method].handler = await ep[method]({
+    //         endpoint: endpointInfo(eps[resource][method]),
+    //         auth: authInfo(eps[resource][method]),
+    //       });
+    //     }
+    //   }
     }
     return eps;
   }
@@ -98,21 +109,21 @@ export default async (workingDir) => {
     Object.keys(endpoints[k]).forEach((v) => {
       const endpoint = endpoints[k][v];
 
-      const createPath = (resource, method, handler) => {
-        let path = ["/", resource];
-        if (!map[method]) {
-          path.push(`.${method}`);
-        }
-        getUrlParams(handler).forEach((p) => {
+      const createPath = (method) => {
+        let path = ["/", endpoint.resource, '/', method.name];
+        // if (!map[method.name]) {
+        //   path.push(`/${method.name}`);
+        // }
+        getUrlParams(method).forEach((p) => {
           path.push(`/{${p}}`);
         });
         return path.join("");
       };
 
-      const isDefaultMethod = !!map[endpoint.method];
+      const isDefaultMethod = !!map[endpoint.method.name];
       const expressInputs = {
-        method: isDefaultMethod ? map[endpoint.method][0] : "post",
-        path: createPath(endpoint.resource, endpoint.method, endpoint.handler),
+        method: isDefaultMethod ? map[endpoint.method.name][0] : "post",
+        path: createPath(endpoint.method),
       };
 
       endpoint.expressInputs = expressInputs;
@@ -133,7 +144,9 @@ export default async (workingDir) => {
         },
       };
 
-      getUrlParams(endpoint.handler).forEach((p) => {
+      // TODO: add errors to the oas file
+
+      getUrlParams(endpoint.method).forEach((p) => {
         swagger.paths[expressInputs.path][expressInputs.method].parameters.push(
           {
             name: p,
