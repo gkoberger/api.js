@@ -13,6 +13,11 @@ Currently (at least somewhat) supported:
 
 This was mostly an excersize in learning typescript myself, and I don't think we should use anything I did here. Right now the ts bundling happens in the built API, which is messy and doesn't give us any of the benefits. I think what we will need to do here is parse the ts in the api module itself so we can use the types when building the oas file, and at this point output the compiled js that we actually run.
 
+Todo here:
+* Define a type in the endpoint and have that effect the API (for example if the endpoint takes an object, we know it's a post and that is the request body)
+* Define a type for the response that ends up in the OAS file
+* how do we make sure oas + typescript doesn't make you define things twice?
+
 ### Error Handling
 
 Added an `errors` function that should return an array of all the errors this endpoint can return. Also added an error utility function that lets you easily throw one of these errors (including passing custom data to the error message).
