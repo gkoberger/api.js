@@ -144,7 +144,32 @@ export default async (workingDir) => {
         },
       };
 
-      // TODO: add errors to the oas file
+      if (endpoint.errors) {
+        const endpointErrors = endpoint.errors();
+        const oneOfError = [];
+        endpointErrors.forEach(err => {
+          oneOfError.push({
+            type: "object",
+            title: err.type,
+            properties: {
+              message: { type: "string", default: "" },
+              type: { type: "string", default: err.type },
+            },
+          });
+        });
+        swagger.paths[expressInputs.path][
+          expressInputs.method
+        ].responses[400] = { // TODO: Support multiple status codes
+          description: 'ERROR', // TODO: figure out how to show more useful info
+          content: {
+            "application/json": {
+              schema: {
+                oneOf: oneOfError,
+              },
+            },
+          },
+        };
+      }
 
       getUrlParams(endpoint.method).forEach((p) => {
         swagger.paths[expressInputs.path][expressInputs.method].parameters.push(
