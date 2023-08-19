@@ -16,7 +16,8 @@ I've love feedback, ideas and PRs!
 # Core Principles
  * *Versioning* What if there was only one version ever, and backwards compatibility was solved in other ways?
  * *Robust* The framework should have leway, and normalize language-based oddities behind the scenes
- * *OAS generation* Nobody should ever have to write an OAS files themselves. The code should be the source of truth.
+ * *Single Source Of Truth* The API, SDK, OAS file and more should all come from one consistent place
+ * *Make easy things easy and hard things hard* It's easy for APIs to get unwieldy, so we want to make sure it's hard to do that.
  * *Errors* How can we make sure all errors are consistent and keep moving the user forward?
  * *SDK Generation* Can the SDK be more tightly connected to the API?
  * *Integrated with the docs* How can we make more dynamic docs, given what it could know about the API?
