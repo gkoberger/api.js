@@ -70,6 +70,7 @@ export default async (api, workingDir) => {
           const inputs = {
             req: {},
             user: false,
+            body: req.body,
           };
 
           getUrlParams(endpoint.handler).forEach((param) => {
@@ -101,6 +102,34 @@ export default async (api, workingDir) => {
             }
 
             inputs.user = auth;
+          }
+
+          // TODO: Do these all at once, so the order
+          // of the transformations is preserved
+
+          if (endpoint.deprecations.length) {
+            for (var i = 0; i < endpoint.deprecations.length; i++) {
+              const deprecate = endpoint.deprecations[i];
+              if (req.body[deprecate.property]) {
+                deprecate.handler(req.body[deprecate.property], req.body);
+                delete req.body[deprecate.property];
+              }
+
+                //proper,type,handler
+            }
+          }
+
+          if (endpoint.casts.length) {
+            for (var i = 0; i < endpoint.casts.length; i++) {
+              const cast = endpoint.casts[i];
+              if (req.body[cast.property]) {
+                if (req.body[cast.property].constructor === cast.type) {
+                  req.body[cast.property] = cast.handler(req.body[cast.property]);
+                }
+              }
+
+                //proper,type,handler
+            }
           }
 
           try {

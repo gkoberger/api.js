@@ -73,6 +73,20 @@ export default async (workingDir) => {
         };
       };
 
+      const castInfo = function (parent) {
+        parent.casts = [];
+        return function (property, type, handler) {
+          parent.casts.push({ property, type, handler });
+        };
+      };
+
+      const deprecateInfo = function (parent) {
+        parent.deprecations = [];
+        return function (property, handler) {
+          parent.deprecations.push({ property, handler });
+        };
+      };
+
       const keys = Object.keys(ep);
       for (let i2 = 0; i2 < keys.length; i2++) {
         const method = keys[i2];
@@ -85,6 +99,8 @@ export default async (workingDir) => {
           eps[resource][method].handler = await ep[method]({
             endpoint: endpointInfo(eps[resource][method]),
             auth: authInfo(eps[resource][method]),
+            cast: castInfo(eps[resource][method]),
+            deprecate: deprecateInfo(eps[resource][method]),
           });
         }
       }
