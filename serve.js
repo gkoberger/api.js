@@ -46,6 +46,23 @@ export default async (api, workingDir) => {
 
   app.use(helmet());
 
+  app.use((req, res, next) => {
+    // temp success/error handling
+
+    res.reply = (status, message) => {
+      const method = ` ${req.method}   `.toUpperCase().substr(0, 8);
+      if (status < 300) {
+        console.log(`🟢 ${status}`.green, method, req.path);
+      } else {
+        console.log(`🔴 ${status}`.red, method, req.path);
+      }
+      console.log(`    ⬅   ${JSON.stringify(message).substr(0, 500)}`.gray);
+      return res.status(status).json(message);
+    };
+
+    next();
+  });
+
   // parse application/x-www-form-urlencoded
   app.use(bodyParser.urlencoded({ extended: false }));
 
@@ -71,6 +88,8 @@ export default async (api, workingDir) => {
       app[expressInputs.method](
         useExpressPath(expressInputs.path),
         async (req, res) => {
+          // A temp function for consolidating the success and errors
+
           const inputs = {
             req: {},
             user: false,
@@ -95,14 +114,14 @@ export default async (api, workingDir) => {
               req.headers["x-api-key"] ||
               req.query["api-key"];
             if (!authInput.apiKey) {
-              return res.status(503).json({ error: "api key required" });
+              return res.reply(503, { error: "api key required" });
             }
           }
 
           if (endpoint.auth) {
             const auth = await endpoint.auth(authInput);
             if (!auth) {
-              return res.status(503).json({ error: "no auth" });
+              return res.reply(503, { error: "no auth" });
             }
 
             inputs.user = auth;
@@ -141,16 +160,17 @@ export default async (api, workingDir) => {
           }
 
           inputs.body = req.body;
-          const parseBody = z.object(endpoint.body).safeParse(inputs.body);
+          const parseBody = endpoint.body.safeParse(inputs.body);
 
           if (!parseBody.success) {
-            // TODO: this is temp
-            return res.status(503).json({ error: true });
+            const error = parseBody.error.issues[0];
+
+            return res.reply(503, { error: `${error.message} (${error.path.join('.')})` });
           }
 
           try {
             const out = await endpoint.handler(inputs);
-            res.status(200).send(out);
+            return res.reply(200, out);
           } catch (e) {
             console.log("ERROR", e);
           }
@@ -173,8 +193,13 @@ export default async (api, workingDir) => {
     res.send(YAML.stringify(api.oas));
   });
 
+  app.use((req, res) => {
+    return res.reply(404, { error: "page not found" });
+  });
+
   app.listen(port, () => {
     console.log("");
-    console.log(`Example app listening on port ${port}`);
+    console.log(`Running the API at https://localhost:${port}`);
+    console.log("");
   });
 };

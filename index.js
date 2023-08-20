@@ -96,7 +96,6 @@ if (cmd === "add") {
 }
 
 if (cmd === "dev") {
-  console.log("Serving the API");
   console.log("");
   const api = await prepare(workingDir);
   serve(api, workingDir);

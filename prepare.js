@@ -101,7 +101,11 @@ export default async (workingDir) => {
 
       const bodyInfo = function (parent) {
         return function (body) {
+          console.log(typeof body);
           parent.body = body;
+          if (!parent.body._def) {
+            parent.body = z.object(parent.body);
+          }
         };
       };
 
@@ -177,7 +181,7 @@ export default async (workingDir) => {
           //description: 'could go here',
           content: {
             'application/json': {
-              schema: z.object(endpoint.body),
+              schema: endpoint.body,
             }
           }
         }
