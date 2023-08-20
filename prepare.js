@@ -85,17 +85,26 @@ export default async (workingDir) => {
         };
       };
 
-      const castInfo = function (parent) {
-        parent.casts = [];
-        return function (property, type, handler) {
-          parent.casts.push({ property, type, handler });
-        };
-      };
+      const versionInfo = function (parent) {
+        parent.versionChanges = {};
 
-      const deprecateInfo = function (parent) {
-        parent.deprecations = [];
-        return function (property, handler) {
-          parent.deprecations.push({ property, handler });
+        const chainable = (version) => ({
+          body: (property, type, handler) => {
+            if (!handler) {
+              handler = type;
+              type = undefined;
+            }
+            if (!parent.versionChanges[version]) {
+              parent.versionChanges[version] = [];
+            }
+            parent.versionChanges[version].push({ property, type, handler });
+
+            return chainable(version);
+          },
+        });
+
+        return function (version) {
+          return chainable(version);
         };
       };
 
@@ -121,9 +130,8 @@ export default async (workingDir) => {
           eps[resource][method].handler = await ep[method]({
             endpoint: endpointInfo(eps[resource][method]),
             auth: authInfo(eps[resource][method]),
-            cast: castInfo(eps[resource][method]),
-            deprecate: deprecateInfo(eps[resource][method]),
             body: bodyInfo(eps[resource][method]),
+            version: versionInfo(eps[resource][method]),
             z,
           });
         }
@@ -176,15 +184,15 @@ export default async (workingDir) => {
         },
       };
 
-      if(endpoint.body) {
+      if (endpoint.body) {
         path.request.body = {
           //description: 'could go here',
           content: {
-            'application/json': {
+            "application/json": {
               schema: endpoint.body,
-            }
-          }
-        }
+            },
+          },
+        };
       }
 
       const params = {};

@@ -50,13 +50,13 @@ export default async (api, workingDir) => {
     // temp success/error handling
 
     res.reply = (status, message) => {
-      const method = ` ${req.method}   `.toUpperCase().substr(0, 8);
+      let log;
       if (status < 300) {
-        console.log(`🟢 ${status}`.green, method, req.path);
+        log = `🟢 ${`${status}`.green}`;
       } else {
-        console.log(`🔴 ${status}`.red, method, req.path);
+        log = `🔴 ${`${status}`.red}`;
       }
-      console.log(`    ⬅   ${JSON.stringify(message).substr(0, 500)}`.gray);
+      console.log(`${log}  ${req.method.toUpperCase().bold} ${req.path}  ${JSON.stringify(message).gray}`.substr(0, process.stdout.columns));
       return res.status(status).json(message);
     };
 
@@ -129,29 +129,21 @@ export default async (api, workingDir) => {
 
           /* Handle the body */
 
-          // TODO: Do these all at once, so the order
-          // of the transformations is preserved
+          if (Object.keys(endpoint.versionChanges).length) {
+            // TODO: sort this in version order!
+            //
 
-          if (endpoint.deprecations.length) {
-            for (var i = 0; i < endpoint.deprecations.length; i++) {
-              const deprecate = endpoint.deprecations[i];
-              if (req.body[deprecate.property]) {
-                deprecate.handler(req.body[deprecate.property], req.body);
-                delete req.body[deprecate.property];
-              }
-
-              //proper,type,handler
-            }
-          }
-
-          if (endpoint.casts.length) {
-            for (var i = 0; i < endpoint.casts.length; i++) {
-              const cast = endpoint.casts[i];
-              if (req.body[cast.property]) {
-                if (req.body[cast.property].constructor === cast.type) {
-                  req.body[cast.property] = cast.handler(
-                    req.body[cast.property]
-                  );
+            for (let v in endpoint.versionChanges) {
+              const version = endpoint.versionChanges[v];
+              for (var i = 0; i < version.length; i++) {
+                const change = version[i];
+                if (req.body[change.property]) {
+                  if (!change.type || req.body[change.property].constructor === change.type) {
+                    // handle both cast and deprecations here
+                    req.body[change.property] = change.handler(
+                      req.body[change.property], req.body
+                    );
+                  }
                 }
               }
 
