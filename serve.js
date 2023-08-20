@@ -2,6 +2,7 @@ import path from "path";
 
 import YAML from "yaml";
 import getParams from "get-function-params";
+import helmet from "helmet";
 import z from "zod";
 
 import colors from "colors";
@@ -42,6 +43,8 @@ export default async (api, workingDir) => {
 
   const app = express();
   const port = 3444;
+
+  app.use(helmet());
 
   // parse application/x-www-form-urlencoded
   app.use(bodyParser.urlencoded({ extended: false }));
