@@ -2,6 +2,7 @@ import path from "path";
 
 import YAML from "yaml";
 import getParams from "get-function-params";
+import z from "zod";
 
 import colors from "colors";
 import { readdirSync, existsSync, readFileSync } from "fs";
@@ -70,7 +71,7 @@ export default async (api, workingDir) => {
           const inputs = {
             req: {},
             user: false,
-            body: req.body,
+            body: {},
           };
 
           getUrlParams(endpoint.handler).forEach((param) => {
@@ -104,6 +105,8 @@ export default async (api, workingDir) => {
             inputs.user = auth;
           }
 
+          /* Handle the body */
+
           // TODO: Do these all at once, so the order
           // of the transformations is preserved
 
@@ -115,7 +118,7 @@ export default async (api, workingDir) => {
                 delete req.body[deprecate.property];
               }
 
-                //proper,type,handler
+              //proper,type,handler
             }
           }
 
@@ -124,12 +127,22 @@ export default async (api, workingDir) => {
               const cast = endpoint.casts[i];
               if (req.body[cast.property]) {
                 if (req.body[cast.property].constructor === cast.type) {
-                  req.body[cast.property] = cast.handler(req.body[cast.property]);
+                  req.body[cast.property] = cast.handler(
+                    req.body[cast.property]
+                  );
                 }
               }
 
-                //proper,type,handler
+              //proper,type,handler
             }
+          }
+
+          inputs.body = req.body;
+          const parseBody = z.object(endpoint.body).safeParse(inputs.body);
+
+          if (!parseBody.success) {
+            // TODO: this is temp
+            return res.status(503).json({ error: true });
           }
 
           try {

@@ -1,6 +1,14 @@
 import path from "path";
 
 import getParams from "get-function-params";
+import {
+  extendZodWithOpenApi,
+  OpenAPIRegistry,
+  OpenApiGeneratorV31,
+} from "@asteasolutions/zod-to-openapi";
+import z from "zod";
+
+extendZodWithOpenApi(z);
 
 import { readdirSync, existsSync, readFileSync } from "fs";
 
@@ -9,11 +17,15 @@ export default async (workingDir) => {
     readFileSync(path.join(workingDir, "/api.config.json"))
   );
 
+  const registry = new OpenAPIRegistry();
+
+  /*
   const swagger = {
-    openapi: "3.0.1",
+    openapi: "3.1.0",
     info: { version: config.version, title: config.title },
     paths: {},
   };
+  */
 
   const map = {
     list: ["get", false],
@@ -87,6 +99,12 @@ export default async (workingDir) => {
         };
       };
 
+      const bodyInfo = function (parent) {
+        return function (body) {
+          parent.body = body;
+        };
+      };
+
       const keys = Object.keys(ep);
       for (let i2 = 0; i2 < keys.length; i2++) {
         const method = keys[i2];
@@ -101,6 +119,8 @@ export default async (workingDir) => {
             auth: authInfo(eps[resource][method]),
             cast: castInfo(eps[resource][method]),
             deprecate: deprecateInfo(eps[resource][method]),
+            body: bodyInfo(eps[resource][method]),
+            z,
           });
         }
       }
@@ -134,40 +154,64 @@ export default async (workingDir) => {
       endpoint.expressInputs = expressInputs;
 
       /* Swagger stuff */
-      if (!swagger.paths[expressInputs.path]) {
-        swagger.paths[expressInputs.path] = {};
-      }
-      swagger.paths[expressInputs.path][expressInputs.method] = {
+
+      const path = {
         summary: endpoint.title,
         description: endpoint.description,
-        parameters: [],
-        tags: [endpoint.resource],
+
+        method: expressInputs.method,
+        path: expressInputs.path,
+
+        request: {},
+
+        // Required at least one
         responses: {
           200: {
-            description: "OK",
+            description: "Object with user data.",
           },
         },
       };
 
-      getUrlParams(endpoint.handler).forEach((p) => {
-        swagger.paths[expressInputs.path][expressInputs.method].parameters.push(
-          {
-            name: p,
-            in: "path",
-            required: true,
-            //"description": "The id of the pet to retrieve",
-            schema: {
-              type: "string",
-            },
+      if(endpoint.body) {
+        path.request.body = {
+          //description: 'could go here',
+          content: {
+            'application/json': {
+              schema: z.object(endpoint.body),
+            }
           }
-        );
+        }
+      }
+
+      const params = {};
+      getUrlParams(endpoint.handler).forEach((p) => {
+        // They're always strings b/c they come from the URL,
+        // although eventually we could allow casting.
+        params[p] = z.string();
       });
+
+      if (Object.keys(params).length) {
+        path.request.params = z.object(params);
+      }
+
+      registry.registerPath(path);
+
       /* End swagger stuff */
     });
   });
 
+  const generator = new OpenApiGeneratorV31(registry.definitions);
+  const oas = generator.generateDocument({
+    openapi: "3.1.0",
+    info: {
+      version: config.version,
+      title: config.title,
+      //description: "This is the API",
+    },
+  });
+
   return {
-    oas: swagger,
+    oas,
     endpoints,
   };
 };
