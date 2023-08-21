@@ -171,7 +171,6 @@ if (cmd === "readme") {
           console.log(
             `  Admin:  https://dash.readme.com/project/${subdomain}/v1.0/reference`
           );
-          //mongoose.disconnect();
           process.exit(0);
         }, 2000);
       })
